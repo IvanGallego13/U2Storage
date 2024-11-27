@@ -1,0 +1,177 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class CsvTest extends TestCase
+{
+    public function test_index_returns_valid_csv_files()
+    {
+        Storage::fake('local');
+
+        Storage::put('app/valid.csv', "header1,header2\nvalue1,value2");
+        Storage::put('app/invalid.txt', 'This is not a CSV file');
+
+        $response = $this->get('/api/csv');
+
+        $response->assertStatus(200)
+                 ->assertJson([
+                     'mensaje' => 'Operación exitosa',
+                     'contenido' => ['valid.csv']
+                 ]);
+    }
+
+    public function test_store_creates_new_csv_file()
+    {
+        Storage::fake('local');
+
+        $data = [
+            'filename' => 'newfile.csv',
+            'content' => "header1,header2\nvalue1,value2"
+        ];
+
+        $response = $this->post('/api/csv', $data);
+
+        $response->assertStatus(200)
+                 ->assertJson(['mensaje' => 'Fichero guardado exitosamente']);
+
+        Storage::assertExists('app/newfile.csv');
+    }
+
+    public function test_store_returns_409_if_file_exists()
+    {
+        Storage::fake('local');
+
+        Storage::put('app/existingfile.csv', "header1,header2\nvalue1,value2");
+
+        $data = [
+            'filename' => 'existingfile.csv',
+            'content' => "header1,header2\nvalue1,value2"
+        ];
+
+        $response = $this->post('/api/csv', $data);
+
+        $response->assertStatus(409)
+                 ->assertJson(['mensaje' => 'El fichero ya existe']);
+    }
+
+    public function test_store_returns_415_if_content_is_invalid_csv()
+    {
+        Storage::fake('local');
+
+        $data = [
+            'filename' => 'invalidfile.csv',
+            'content' => 'This is not a CSV'
+        ];
+
+        $response = $this->post('/api/csv', $data);
+
+        $response->assertStatus(415)
+                 ->assertJson(['mensaje' => 'Contenido no es un CSV válido']);
+    }
+
+    public function test_show_returns_file_content()
+    {
+        Storage::fake('local');
+
+        Storage::put('app/existingfile.csv', "header1,header2\nvalue1,value2");
+
+        $response = $this->get('/api/csv/existingfile.csv');
+
+        $response->assertStatus(200)
+                 ->assertJson([
+                     'mensaje' => 'Fichero leído con éxito',
+                     'contenido' => [
+                         ['header1' => 'value1', 'header2' => 'value2']
+                     ]
+                 ]);
+    }
+
+    public function test_show_returns_404_if_file_not_exists()
+    {
+        Storage::fake('local');
+
+        $response = $this->get('/api/csv/nonexistentfile.csv');
+
+        $response->assertStatus(404)
+                 ->assertJson(['mensaje' => 'El fichero no existe']);
+    }
+
+    public function test_update_modifies_existing_file()
+    {
+        Storage::fake('local');
+
+        Storage::put('app/existingfile.csv', "header1,header2\nvalue1,value2");
+
+        $data = [
+            'filename' => 'existingfile.csv',
+            'content' => "header1,header2\nnew_value1,new_value2"
+        ];
+
+        $response = $this->put('/api/csv/existingfile.csv', $data);
+
+        $response->assertStatus(200)
+                 ->assertJson(['mensaje' => 'Fichero actualizado exitosamente']);
+
+        Storage::assertExists('app/existingfile.csv');
+        $this->assertEquals("header1,header2\nnew_value1,new_value2", Storage::get('app/existingfile.csv'));
+    }
+
+    public function test_update_returns_404_if_file_not_exists()
+    {
+        Storage::fake('local');
+
+        $data = [
+            'filename' => 'nonexistentfile.csv',
+            'content' => "header1,header2\nvalue1,value2"
+        ];
+
+        $response = $this->put('/api/csv/nonexistentfile.csv', $data);
+
+        $response->assertStatus(404)
+                 ->assertJson(['mensaje' => 'El fichero no existe']);
+    }
+
+    public function test_update_returns_415_if_content_is_invalid_csv()
+    {
+        Storage::fake('local');
+
+        Storage::put('app/existingfile.csv', "header1,header2\nvalue1,value2");
+
+        $data = [
+            'filename' => 'existingfile.csv',
+            'content' => 'This is not a CSV'
+        ];
+
+        $response = $this->put('/api/csv/existingfile.csv', $data);
+
+        $response->assertStatus(415)
+                 ->assertJson(['mensaje' => 'Contenido no es un CSV válido']);
+    }
+
+    public function test_destroy_deletes_existing_file()
+    {
+        Storage::fake('local');
+
+        Storage::put('app/existingfile.csv', "header1,header2\nvalue1,value2");
+
+        $response = $this->delete('/api/csv/existingfile.csv');
+
+        $response->assertStatus(200)
+                 ->assertJson(['mensaje' => 'Fichero eliminado exitosamente']);
+
+        Storage::assertMissing('app/existingfile.csv');
+    }
+
+    public function test_destroy_returns_404_if_file_not_exists()
+    {
+        Storage::fake('local');
+
+        $response = $this->delete('/api/csv/nonexistentfile.csv');
+
+        $response->assertStatus(404)
+                 ->assertJson(['mensaje' => 'El fichero no existe']);
+    }
+}
