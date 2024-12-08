@@ -16,11 +16,8 @@ Route::get('/json/{id}', [JsonController::class, 'show']);
 Route::put('/json/{id}', [JsonController::class, 'update']);
 Route::delete('/json/{id}', [JsonController::class, 'destroy']);
 
-Route::get('csv', [CsvController::class, 'index']);
-Route::post('csv', [CsvController::class, 'store']);
-Route::get('csv/{id}', [CsvController::class, 'show']);
-Route::put('csv/{id}', [CsvController::class, 'update']);
-Route::delete('csv/{id}', [CsvController::class, 'destroy']);
-
-
-
+Route::get('/csv', [CsvController::class, 'index']); // Lista todos los archivos CSV
+Route::post('/csv', [CsvController::class, 'store']); // Crea un nuevo archivo CSV
+Route::get('/csv/{id}', [CsvController::class, 'show']); // Muestra el contenido de un archivo CSV
+Route::put('/csv/{id}', [CsvController::class, 'update']); // Actualiza un archivo CSV
+Route::delete('/csv/{id}', [CsvController::class, 'destroy']); // Elimina un archivo CSV
