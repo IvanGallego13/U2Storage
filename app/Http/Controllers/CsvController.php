@@ -14,8 +14,8 @@ class CsvController extends Controller
         $csvFiles = array_filter($files, fn($file) => pathinfo($file, PATHINFO_EXTENSION) === 'csv');
 
         return response()->json([
-            'mensaje' => 'Listado de ficheros',
-            'contenido' => array_values($csvFiles),
+        'mensaje' => 'Listado de ficheros',
+        'contenido' => array_values($csvFiles),
         ]);
     }
 
@@ -29,18 +29,28 @@ class CsvController extends Controller
         $filename = $request->input('filename');
         $content = $request->input('content');
 
-        Storage::disk('local')->put($filename, $content);
+        // Guardar archivo en 'storage/app'
+        $path = "app/$filename";
+
+        if (Storage::disk('local')->exists($path)) {
+            return response()->json(['mensaje' => 'El archivo ya existe'], 409);
+        }
+
+        Storage::disk('local')->put($path, $content);
 
         return response()->json(['mensaje' => 'Guardado con éxito'], 200);
     }
 
     public function show(string $id): JsonResponse
     {
-        if (!Storage::disk('local')->exists("app/$id")) {
+        // Buscar el archivo en 'storage/app'
+        $path = "app/$id";
+
+        if (!Storage::disk('local')->exists($path)) {
             return response()->json(['mensaje' => 'Fichero no encontrado'], 404);
         }
 
-        $content = Storage::disk('local')->get("app/$id");
+        $content = Storage::disk('local')->get($path);
         $lines = array_filter(explode("\n", trim($content)));
 
         if (count($lines) < 2) {
@@ -68,28 +78,33 @@ class CsvController extends Controller
 
     public function update(Request $request, string $id): JsonResponse
     {
-        if (!Storage::disk('local')->exists("app/$id")) {
-            Storage::disk('local')->put("app/$id", json_encode(['key' => 'value']));
+        // Buscar el archivo en 'storage/app'
+        $path = "app/$id";
+
+        if (!Storage::disk('local')->exists($path)) {
+            return response()->json(['mensaje' => 'Fichero no encontrado'], 404);
         }
 
         $request->validate([
-            'filename' => 'required|string',
             'content' => 'required|string',
         ]);
 
         $content = $request->input('content');
-        Storage::disk('local')->put("app/$id", $content);
+        Storage::disk('local')->put($path, $content);
 
         return response()->json(['mensaje' => 'Fichero actualizado exitosamente'], 200);
     }
 
     public function destroy(string $id): JsonResponse
     {
-        if (!Storage::disk('local')->exists("app/$id")) {
-            Storage::disk('local')->put("app/$id", json_encode(['key' => 'value']));
+        // Buscar el archivo en 'storage/app'
+        $path = "app/$id";
+
+        if (!Storage::disk('local')->exists($path)) {
+            return response()->json(['mensaje' => 'Fichero no encontrado'], 404);
         }
 
-        Storage::disk('local')->delete("app/$id");
+        Storage::disk('local')->delete($path);
 
         return response()->json(['mensaje' => 'Fichero eliminado exitosamente'], 200);
     }
